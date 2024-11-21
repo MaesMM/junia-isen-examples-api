@@ -1,6 +1,6 @@
 # Examples API
 
-Simple API that returns example records from a database.
+Simple API that returns example records from a azure database.
 
 ## Prerequisites
 
