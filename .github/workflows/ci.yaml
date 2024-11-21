@@ -1,14 +1,17 @@
 name: Docker Build, Publish & Deploy
 
+env:
+  AZURE_WEBAPP_NAME: cloud-isen-bg
+
 on:
   push:
-    branches: 
+    branches:
       - main
 
 permissions:
   contents: read
   packages: write
-  
+
 jobs:
   build_and_publish:
     runs-on: ubuntu-latest
@@ -18,39 +21,45 @@ jobs:
         run: echo "REPO_LC=${REPO,,}" >>${GITHUB_ENV}
         env:
           REPO: '${{ github.repository }}'
-    
-   
+
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
-         
+
       - name: Log in to GitHub Docker Registry/Packages
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Build Docker image
-        run: docker build -t ghcr.io/$REPO_LC:latest . 
-            
+        run: docker build -t ghcr.io/$REPO_LC:latest .
+
         # 4. Publier l'image Docker sur GitHub Packages
       - name: Publish Docker image
         run: docker push ghcr.io/$REPO_LC:latest
 
-  # deploy on azure
-  # deploy:
-  #   needs: build_and_publish
-  #   runs-on: ubuntu-latest
+  Deploy_to_azure:
+    permissions:
+      contents: none
+    runs-on: ubuntu-latest
+    needs: build_and_publish
+    environment:
+      name: 'Development'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
-  #   steps:
-  #         # 1. Vérifier le code du dépôt
-          
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v3
+    steps:
+      - name: set lower case repo name
+        run: echo "REPO_LC=${REPO,,}" >>${GITHUB_ENV}
+        env:
+          REPO: '${{ github.repository }}'
 
-  #     # 2. Déployer l'application (exemple avec SSH sur un serveur distant)
-                
-  #     - name: TEST Deploy to server
-  #       run: |
-  #         echo "Deploying to server..."
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: 'ghcr.io/$REPO_LC:latest'
