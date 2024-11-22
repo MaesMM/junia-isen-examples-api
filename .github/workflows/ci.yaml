@@ -59,7 +59,8 @@ jobs:
         run: echo "REPO_LC=${REPO,,}" >>${GITHUB_ENV}
         env:
           REPO: '${{ github.repository }}'
-
+      - name: Install Azure CLI
+        run: curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
       # - name: Deploy to Azure Web App
       #   id: deploy-to-webapp
       #   uses: azure/webapps-deploy@v2
@@ -68,9 +69,14 @@ jobs:
       #     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
       #     images: 'ghcr.io/$REPO_LC:latest'
       - name: Login via Azure CLI
-        uses: azure/login@v2
+        uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # enable-AzPSSession: false
+          # environment: azurecloud
+          # allow-no-subscriptions: false
+          # audience: api://AzureADTokenExchange
+          # auth-type: SERVICE_PRINCIPAL
           # client-id: ${{ secrets.REGISTRY_USERNAME }}
           # tenant-id: 054ac6ef-3ff9-4003-8495-fcffd3e9cbc9
         
