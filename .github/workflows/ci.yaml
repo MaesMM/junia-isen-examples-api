@@ -2,16 +2,20 @@ name: Docker Build, Publish & Deploy
 
 env:
   AZURE_WEBAPP_NAME: cloud-isen-bg
+  WORKING_DIRECTORY: '.'        # set this to the path to your path of working directory inside github repository, defaults to the repository root
+  PYTHON_VERSION: '3.12'        # set the version to use
+  STARTUP_COMMAND: ''           # set this to the startup command required to start the gunicorn server. default it is empty
+
 
 on:
   push:
-    branches:
+    branches: 
       - main
 
 permissions:
   contents: read
   packages: write
-
+  
 jobs:
   build_and_publish:
     runs-on: ubuntu-latest
@@ -21,22 +25,22 @@ jobs:
         run: echo "REPO_LC=${REPO,,}" >>${GITHUB_ENV}
         env:
           REPO: '${{ github.repository }}'
-
-
+    
+   
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
+         
       - name: Log in to GitHub Docker Registry/Packages
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+          
       - name: Build Docker image
-        run: docker build -t ghcr.io/$REPO_LC:latest .
-
+        run: docker build -t ghcr.io/$REPO_LC:latest . 
+            
         # 4. Publier l'image Docker sur GitHub Packages
       - name: Publish Docker image
         run: docker push ghcr.io/$REPO_LC:latest
@@ -56,10 +60,39 @@ jobs:
         env:
           REPO: '${{ github.repository }}'
 
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v2
+      # - name: Deploy to Azure Web App
+      #   id: deploy-to-webapp
+      #   uses: azure/webapps-deploy@v2
+      #   with:
+      #     app-name: ${{ env.AZURE_WEBAPP_NAME }}
+      #     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+      #     images: 'ghcr.io/$REPO_LC:latest'
+      - name: Login via Azure CLI
+        uses: azure/login@v2
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          images: 'ghcr.io/$REPO_LC:latest'
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # client-id: ${{ secrets.REGISTRY_USERNAME }}
+          # tenant-id: 054ac6ef-3ff9-4003-8495-fcffd3e9cbc9
+        
+      # - name: 'Build and push image'
+      #   uses: azure/docker-login@v1
+      #   with:
+      #     login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+      #     username: ${{ secrets.REGISTRY_USERNAME }}
+      #     password: ${{ secrets.REGISTRY_PASSWORD }}
+      # - run: |
+      #     docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/sampleapp:${{ github.sha }}
+      #     docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/sampleapp:${{ github.sha }}
+
+      # - name: 'Deploy to Azure Container Instances'
+      #   uses: 'azure/aci-deploy@v1'
+      #   with:
+      #     resource-group: ${{ secrets.RESOURCE_GROUP }}
+      #     dns-name-label: ${{ secrets.RESOURCE_GROUP }}${{ github.run_number }}
+      #     image: ghcr.io/$REPO_LC:latest
+      #     registry-login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+      #     registry-username: ${{ secrets.REGISTRY_USERNAME }}
+      #     registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+      #     name: isen-cloud-bg
+      #     username: ${{ secrets.REGISTRY_USERNAME }}
+      #     password: ${{ secrets.REGISTRY_PASSWORD }}
